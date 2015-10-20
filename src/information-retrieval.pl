@@ -17,7 +17,7 @@ my $stw   = "../res/stopwords-ina.dat";
 ## Output data
 my $index = "../out/indeks.txt";
 
-my %list = preproces($doc, $res, $index);
+my %list = preprocess($doc, $res, $index);
 
 # print Dumper \%list;
 
