@@ -5,7 +5,7 @@
 Run from root folder in console / terminal / command line.
 
 ```shell
-perl -Ilib/ src/information-retrieval.pl
+$ perl -Ilib/ src/information-retrieval.pl
 ```
 
 To quit program, press `Ctrl + C`.
