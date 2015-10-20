@@ -58,8 +58,8 @@ sub preprocess {
     ## total frekuensi kata pada seluruh dokumen
     my %cft         = ();
 
-    ## total banyaknya dokumen
-    my $totalDoc    = 0;
+    ## total banyaknya kata pada seluruh dokumen
+    my $cs          = 0;
 
     ## frekuensi tiap dokumen (DOCNO)
     my %docTermFreq = ();
@@ -87,9 +87,6 @@ sub preprocess {
             ## inisialisasi ulang daftar kata dan docno tiap dokumen baru
             %hashKata = ();
             $curr_doc_no = $_;
-
-            ## increment informasi banyaknya dokumen
-            $totalDoc += 1;
         }
 
         if (/<TEXT>/../<\/TEXT>/) {
@@ -112,6 +109,8 @@ sub preprocess {
             $docTermFreq{ $curr_doc_no } = { %hashKata };
             ## simpan total banyaknya kata dalam tiap docno
             $docTermFreq{ $curr_doc_no }{ "dld" } = $dld;
+            ## simpan total banyaknya kata pada seluruh dokumen
+            $cs += $dld;
 
             ## hitung frekuensi kemunculan kata pada berapa bayak dokumen
             foreach my $kata (keys %hashKata) {
@@ -121,9 +120,6 @@ sub preprocess {
                     $dft{ $kata } = 1;
                 }
             }
-
-            # say scalar keys %hashKata;
-            # say $dld;
 
             ## kosongkan daftar frekuensi kata untuk dokumen selanjutnya
             %hashKata = ();
