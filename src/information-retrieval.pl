@@ -25,7 +25,7 @@ sub main {
     my $outputPath   = "./out";
 
     ## Input data
-    my $doc          = "$resourcePath/test.dat";
+    my $doc          = "$resourcePath/docs.dat";
     my $stw          = "$resourcePath/stopwords-ina.dat";
 
     ## Output data
@@ -93,7 +93,7 @@ sub preprocessDocument {
     open DOCS, "$docs" or die "can't open resource file";
 
     ## open file indeks kata
-    open INDEX, "> $file" or die "can't open index file";
+    # open INDEX, "> $file" or die "can't open index file";
 
     ## total kata muncul pada berapa dokumen
     my %dft         = ();
@@ -245,7 +245,7 @@ sub preprocessDocument {
 
     ## tutup file
     close DOCS;
-    close INDEX;
+    # close INDEX;
 
     return %p;
 }
@@ -269,11 +269,11 @@ sub tokenize {
     foreach my $kata (@$splitKorpus) {
 
         ## STOPWORDS REMOVAL
-        # unless (exists($$stopwords{ $kata })) {
+        unless (exists($$stopwords{ $kata })) {
 
             ## STEMMING
-            # my $rootKata = stem($kata);
-            my $rootKata = $kata;
+            # my $rootKata = $kata;
+            my $rootKata = stem($kata);
 
             ## hitung frekuensi tiap kata
             if (exists($$hashKata{ $rootKata })) {
@@ -290,7 +290,7 @@ sub tokenize {
             }
 
             $dld += 1;
-        # }
+        }
     }
 
     return $dld;
@@ -362,6 +362,13 @@ sub preprocessQuery {
     my @cleanQueries = ();
 
     foreach my $query (@queries) {
+        $query =~ s/<.*?>/ /gi;
+        $query =~ s/[#\%\$\&\/\\,;:!?\.\@+`'"\*()_{}^=|]/ /g;
+        $query =~ s/\s+/ /gi;
+        $query =~ s/^\s+//;
+        $query =~ s/\s+$//;
+        $query =~ tr/[A-Z]/[a-z]/;
+
         ## STOPWORDS REMOVAL
         unless (exists($stopwords{ $query })) {
             ## STEMMING
