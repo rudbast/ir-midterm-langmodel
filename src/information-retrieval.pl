@@ -6,16 +6,19 @@ use warnings;
 use feature "say";
 use Data::Dumper qw (Dumper);
 
+use Stemmer qw ( prefixSuffixStem suffixPrefixStem )
+
 
 #### Main Program
 
-my $doc = "../res/Koleksi.dat";
-my $stw = "../res/stopwords-ina.dat";
-
-my $res = "../out/hasil.txt";
+## Input data
+my $doc   = "../res/docs.dat";
+my $stw   = "../res/stopwords-ina.dat";
+## Output data
+my $res   = "../out/hasil.txt";
 my $index = "../out/indeks.txt";
 
-## preprocessing
+## main process
 my %list = indexing($doc, $res, $index);
 
 # print Dumper \%list;
@@ -24,42 +27,24 @@ say "selesai.";
 
 ####
 
-sub tokenizing {
+sub preprocess {
     $file = shift;
-
-    open RESOURCE, $file or die "can't open resource file";
-
-    close RESOURCE;
-}
-
-sub stopwords_removal {
-    # body...
-}
-
-sub stemming {
-    # body...
-}
-
-sub indexing {
-    ## open dokumen awal
-    open(FILE, "$_[0]") or die "can't open data source";
-
-    ## open stopwords file
-    open(STOP,"$_[3]") or die "can't open ";
-
-    ## open file hasil reduksi
-    open(RESULT, "> $_[1]") or die "can't open result file";
-
     ## open file indeks kata
-    open(INDEX, "> $_[2]") or die "can't open index file";
+    open INDEX, "> $file" or die "can't open index file";
+
+    ## open file
+    open DOCS, "$file" or die "can't open resource file";
+
+    ## open file stopwords
+    open(STOP,"$file") or die "can't open stopwords file";
 
     ## simpan list stopwords dalam hash
-    # my %stopwords = ();
+    my %stopwords = ();
 
-    # while(<STOP>) {
-    #     chomp;
-    #     $stopwords{$_} = 1;
-    # }
+    while (<STOP>) {
+        chomp;
+        $stopwords{ $_ } = 1;
+    }
 
     ## total kata muncul pada berapa dokumen
     my %termfreq = ();
@@ -74,26 +59,14 @@ sub indexing {
     my %hashKata = ();
 
     ## nomor dokumen
-    my $curr_doc_id;
     my $curr_doc_no;
 
     ## total banyaknya kata tiap dokumen
     my $totalWordsEachDoc = 0;
 
-    while(<FILE>) {
+    while (<DOCS>) {
         chomp;
         s/\s+/ /gi;
-
-        ## update informasi docid
-        if (/<DOCID>/) {
-            s/<.*?>/ /gi;
-            s/\s+/ /gi;
-            s/^\s+//;
-            s/\s+$//;
-
-            ## inisialisasi ulang doc id baru
-            $curr_doc_id = $_;
-        }
 
         ## update informasi docno
         if (/<DOCNO>/) {
@@ -110,29 +83,6 @@ sub indexing {
             $totalDoc += 1;
         }
 
-        if (/<\/DOC>/) {
-            ## simpan frekuensi tiap kata dalam tiap docid - docno
-            $result{$curr_doc_id}{$curr_doc_no} = { %hashKata };
-            ## simpan total banyaknya kata dalam tiap docid - docno
-            $result{$curr_doc_id}{$curr_doc_no}{"totalWordsEachDoc"} = $totalWordsEachDoc;
-
-            ## hitung frekuensi kemunculan kata untuk seluruh dokumen
-            foreach my $kata (keys %hashKata) {
-                if (exists($termfreq{$kata})) {
-                    $termfreq{$kata} += 1;
-                } else {
-                    $termfreq{$kata} = 1;
-                }
-            }
-
-            # say scalar keys %hashKata;
-            # say $totalWordsEachDoc;
-
-            ## kosongkan daftar frekuensi kata untuk dokumen selanjutnya
-            %hashKata = ();
-            $totalWordsEachDoc = 0;
-        }
-
         if (/<TEXT>/../<\/TEXT>/) {
             s/<.*?>/ /gi;
             s/[#\%\$\&\/\\,;:!?\.\@+`'"\*()_{}^=|]/ /g;
@@ -144,19 +94,49 @@ sub indexing {
             ## tokenisasi
             my @splitKorpus = split;
 
-            foreach my $kata(@splitKorpus) {
-                ## cek kata apakah termasuk dalam list stopwords
-                # unless (exists($stopwords{$kata})) {
-                    if (exists($hashKata{$kata})) {
-                        $hashKata{$kata} += 1;
+            ## TOKENIZATION
+            foreach my $kata (@splitKorpus) {
+
+                ## STOPWORDS REMOVAL
+                unless (exists($stopwords{ $kata })) {
+
+                    ## STEMMING
+                    $rootKata = stem($kata);
+
+                    ## hitung frekuensi tiap kata
+                    if (exists($hashKata{ $rootKata })) {
+                        $hashKata{ $rootKata } += 1;
                     } else {
-                        $hashKata{$kata} = 1;
+                        $hashKata{ $rootKata } = 1;
                     }
-                # }
+                }
             }
 
             ## increment jumlah frekuensi kata dalam dokumen
             $totalWordsEachDoc += scalar @splitKorpus;
+        }
+
+        if (/<\/DOC>/) {
+            ## simpan frekuensi tiap kata dalam tiap docno
+            $result{ $curr_doc_no } = { %hashKata };
+            ## simpan total banyaknya kata dalam tiap docno
+            $result{ $curr_doc_no }{ "totalWordsEachDoc" } = $totalWordsEachDoc;
+
+            ## hitung frekuensi kemunculan kata untuk seluruh dokumen
+            foreach my $kata (keys %hashKata) {
+                if (exists($termfreq{ $kata })) {
+                    $termfreq{ $kata } += 1;
+                } else {
+                    $termfreq{ $kata } = 1;
+                }
+            }
+
+            # say scalar keys %hashKata;
+            # say $totalWordsEachDoc;
+
+            ## kosongkan daftar frekuensi kata untuk dokumen selanjutnya
+            %hashKata = ();
+            $totalWordsEachDoc = 0;
         }
     }
 
@@ -168,22 +148,17 @@ sub indexing {
     }
 
     ## hitung tf-idf
-    foreach my $docid (sort keys %result) {
-        foreach my $docno (sort keys %{ $result{$docid} }) {
-            say RESULT "<DOCID> $docid </DOCID>";
-            say RESULT "<DOCNO> $docno </DOCNO>";
+    my %TFIDF = ();
 
-            foreach my $word (sort keys %{ $result{$docid}{$docno} }) {
-                if ($word ne "totalWordsEachDoc") {
-                    my $currTotalFreq = $result{$docid}{$docno}{"totalWordsEachDoc"};
-                    my $TFIDF = $result{$docid}{$docno}{$word} / $currTotalFreq * $IDF{$word};
-
-                    printf RESULT "%20s : %.9f\n", $word, $TFIDF;
-                }
+    foreach my $docno (sort keys %result) {
+        foreach my $word (sort keys %{ $result{$docno} }) {
+            if ($word ne "totalWordsEachDoc") {
+                my $currTotalFreq = $result{$docno}{"totalWordsEachDoc"};
+                $TFIDF{$docno} = $result{$docno}{$word} / $currTotalFreq * $IDF{$word};
             }
-
-            say RESULT "";
         }
+
+        say RESULT "";
     }
 
     foreach my $word (sort {$termfreq{$b} <=> $termfreq{$a}
@@ -192,12 +167,35 @@ sub indexing {
     }
 
     ## tutup file
-    # close STOP;
-    close FILE;
-    close RESULT;
+    close STOP;
+    close DOCS;
     close INDEX;
 
     return %result;
+}
+
+=item stem()
+
+Melakukan stemming pada kata dari parameter menggunakan modul perl
+yang di-export dari file Stemmer.pm.
+
+Hasil yang di-return adalah root dari kata yang dihasilkan oleh
+'prefixSuffixStem()' / 'suffixPrefixStem()', secara default akan
+menggunakan 'prefixSuffixStem()', tambahkan parameter (value: 0/1)
+untuk memilih secara eksplisit.
+
+=cut
+sub stem {
+    ## kata yang akan di-stem
+    my $word = shift;
+    ## pilihan metode yang digunakan (default: 0)
+    my $choice = shift or 0;
+
+    if ($choice eq 0) {
+        return prefixSuffixStem($word);
+    } else {
+        return suffixPrefixStem($word);
+    }
 }
 
 sub computeTfIdf {
