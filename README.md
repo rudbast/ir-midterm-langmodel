@@ -14,7 +14,6 @@ To quit program, press Ctrl + C.
 
 Program result output to console / terminal / command line.
 
-Example:
 ![alt tag](https://github.com/rudbast/ir-midterm-langmodel/blob/gh-pages/img/output.png)
 
 ## License
