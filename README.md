@@ -2,16 +2,10 @@
 
 ## How to
 
-Run program in src/
+Run from root folder
 
 ```shell
-perl information-retrieval.pl
-```
-
-or just change file permission to executable `chmod +x *` and run
-
-```shell
-./information-retrieval.pl
+perl -Ilib/ src/information-retrieval.pl
 ```
 
 ## Output
