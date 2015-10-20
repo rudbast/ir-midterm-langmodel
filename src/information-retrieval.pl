@@ -61,8 +61,8 @@ sub preprocess {
     ## total banyaknya dokumen
     my $totalDoc = 0;
 
-    ## frekuensi tiap docid - docno
-    my %result = ();
+    ## frekuensi tiap dokumen (DOCNO)
+    my %docTermFreq = ();
 
     ## frekuensi per dokumen
     my %hashKata = ();
@@ -109,9 +109,9 @@ sub preprocess {
 
         if (/<\/DOC>/) {
             ## simpan frekuensi tiap kata dalam tiap docno
-            $result{ $curr_doc_no } = { %hashKata };
+            $docTermFreq{ $curr_doc_no } = { %hashKata };
             ## simpan total banyaknya kata dalam tiap docno
-            $result{ $curr_doc_no }{ "totalWordsEachDoc" } = $totalWordsEachDoc;
+            $docTermFreq{ $curr_doc_no }{ "totalWordsEachDoc" } = $totalWordsEachDoc;
 
             ## hitung frekuensi kemunculan kata pada berapa bayak dokumen
             foreach my $kata (keys %hashKata) {
@@ -131,21 +131,28 @@ sub preprocess {
         }
     }
 
-    ## hitung idf
-    # my %IDF = ();
+    ## hitung tft tiap dokumen
+    my %tft = ();
 
-    # foreach my $word (keys %dft) {
-    #     $IDF{$word} = $dft{$word} / $totalDoc;
-    # }
+    foreach my $word (keys %dft) {
+        # $tft{$word} = $dft{$word} / $totalDoc;
+        foreach my $doc (keys %docTermFreq) {
+            if (exists($docTermFreq{ $doc }{ $word })) {
+                $tft{ $doc }{ $word } = $docTermFreq{ $doc }{ $word };
+            } else {
+                $tft{ $doc }{ $word } = 0;
+            }
+        }
+    }
 
     # ## hitung tf-idf
     # my %TFIDF = ();
 
-    # foreach my $docno (sort keys %result) {
-    #     foreach my $word (sort keys %{ $result{$docno} }) {
+    # foreach my $docno (sort keys %docTermFreq) {
+    #     foreach my $word (sort keys %{ $docTermFreq{$docno} }) {
     #         if ($word ne "totalWordsEachDoc") {
-    #             my $currTotalFreq = $result{$docno}{"totalWordsEachDoc"};
-    #             $TFIDF{$docno} = $result{$docno}{$word} / $currTotalFreq * $IDF{$word};
+    #             my $currTotalFreq = $docTermFreq{$docno}{"totalWordsEachDoc"};
+    #             $TFIDF{$docno} = $docTermFreq{$docno}{$word} / $currTotalFreq * $IDF{$word};
     #         }
     #     }
     # }
@@ -160,7 +167,7 @@ sub preprocess {
     close DOCS;
     close INDEX;
 
-    return %cft;
+    return %tft;
 }
 
 sub tokenize {
