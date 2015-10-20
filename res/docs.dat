@@ -1,16 +1,27 @@
 <DOC>
-<DOCNO> D1 </DOCNO>
-Bus yang berwarna coklat semalam mengalami kecelakaan.
+    <DOCNO> D1 </DOCNO>
+    <TEXT>
+        Bus yang berwarna coklat semalam mengalami kecelakaan.
+    </TEXT>
 </DOC>
+
 <DOC>
-<DOCNO> D2 </DOCNO>
-Pengemis berbaju coklat itu tinggal di dekat sungai yang tercemar.
+    <DOCNO> D2 </DOCNO>
+    <TEXT>
+        Pengemis berbaju coklat itu tinggal di dekat sungai yang tercemar.
+    </TEXT>
 </DOC>
+
 <DOC>
-<DOCNO> D3 </DOCNO>
-Kapal minyak mengalami kecelakaan sehingga lautan menjadi tercemar.
+    <DOCNO> D3 </DOCNO>
+    <TEXT>
+        Kapal minyak mengalami kecelakaan sehingga lautan menjadi tercemar.
+    </TEXT>
 </DOC>
+
 <DOC>
-<DOCNO> D4 </DOCNO>
-Sungai di Jakarta berwarna coklat karena sudah tercemar dengan sampah dari warga dekat sungai.
+    <DOCNO> D4 </DOCNO>
+    <TEXT>
+        Sungai di Jakarta berwarna coklat karena sudah tercemar dengan sampah dari warga dekat sungai.
+    </TEXT>
 </DOC>
