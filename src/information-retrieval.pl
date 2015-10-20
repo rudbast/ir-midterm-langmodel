@@ -22,10 +22,10 @@ my $stw          = "$resourcePath/stopwords-ina.dat";
 ## Output data
 my $index        = "$outputPath/indeks.txt";
 
-my %list = preprocess($doc, $index, $stw);
+my %result = preprocess($doc, $index, $stw);
 
 $Data::Dumper::Sortkeys = 1;
-print Dumper \%list;
+print Dumper \%result;
 
 say "selesai.";
 
@@ -53,25 +53,25 @@ sub preprocess {
     }
 
     ## total kata muncul pada berapa dokumen
-    my %dft = ();
+    my %dft         = ();
 
     ## total frekuensi kata pada seluruh dokumen
-    my %cft = ();
+    my %cft         = ();
 
     ## total banyaknya dokumen
-    my $totalDoc = 0;
+    my $totalDoc    = 0;
 
     ## frekuensi tiap dokumen (DOCNO)
     my %docTermFreq = ();
 
     ## frekuensi per dokumen
-    my %hashKata = ();
+    my %hashKata    = ();
 
     ## nomor dokumen
     my $curr_doc_no;
 
     ## total banyaknya kata tiap dokumen
-    my $totalWordsEachDoc = 0;
+    my $dld = 0;
 
     while (<DOCS>) {
         chomp;
@@ -104,14 +104,14 @@ sub preprocess {
             my @splitKorpus = split;
 
             ## hitung total kata tiap dokumen
-            $totalWordsEachDoc += tokenize(\@splitKorpus, \%hashKata, \%cft, \%stopwords);
+            $dld += tokenize(\@splitKorpus, \%hashKata, \%cft, \%stopwords);
         }
 
         if (/<\/DOC>/) {
             ## simpan frekuensi tiap kata dalam tiap docno
             $docTermFreq{ $curr_doc_no } = { %hashKata };
             ## simpan total banyaknya kata dalam tiap docno
-            $docTermFreq{ $curr_doc_no }{ "totalWordsEachDoc" } = $totalWordsEachDoc;
+            $docTermFreq{ $curr_doc_no }{ "dld" } = $dld;
 
             ## hitung frekuensi kemunculan kata pada berapa bayak dokumen
             foreach my $kata (keys %hashKata) {
@@ -123,19 +123,19 @@ sub preprocess {
             }
 
             # say scalar keys %hashKata;
-            # say $totalWordsEachDoc;
+            # say $dld;
 
             ## kosongkan daftar frekuensi kata untuk dokumen selanjutnya
             %hashKata = ();
-            $totalWordsEachDoc = 0;
+            $dld = 0;
         }
     }
 
-    ## hitung tft tiap dokumen
+    ## container hasil hitung tft tiap dokumen
     my %tft = ();
 
+    ## hitung tft
     foreach my $word (keys %dft) {
-        # $tft{$word} = $dft{$word} / $totalDoc;
         foreach my $doc (keys %docTermFreq) {
             if (exists($docTermFreq{ $doc }{ $word })) {
                 $tft{ $doc }{ $word } = $docTermFreq{ $doc }{ $word };
@@ -145,13 +145,53 @@ sub preprocess {
         }
     }
 
+    ## container hasil hitung pml(t | Md) tiap dokumen
+    my %pml     = ();
+    ## container hasil hitung pavg
+    my %pavg    = ();
+    ## container hasil hitung ft tiap dokumen
+    my %ft      = ();
+    ## container hasil hitung R t tiap dokumen
+    my %Rt      = ();
+
+    foreach my $word (keys %dft) {
+        my $avg = 0;
+
+        ## hitung pml(t | Md)
+        foreach my $doc (keys %docTermFreq) {
+            my $dld = $docTermFreq{ $doc }{ "dld" };
+
+            ## pml(t | Md) = tft / dld
+            $pml{ $doc }{ $word } = $tft{ $doc }{ $word } / $dld;
+
+            $avg += $pml{ $doc }{ $word };
+        }
+
+        ## pavg = avg(pml(d1, d2, d3)) / dft
+        $pavg{ $word } = $avg / $dft{ $word };
+
+        ## hitung ft
+        foreach my $doc (keys %docTermFreq) {
+            my $dld = $docTermFreq{ $doc }{ "dld" };
+
+            ## ft = pavg * dld
+            $ft{ $doc }{ $word } = $pavg{ $word } * $dld;
+
+            my $currFt = $ft{ $doc }{ $word };
+            my $currTft = $tft{ $doc }{ $word };
+
+            ## Rt = (1/(1+ft)*ft/(1+ft))^tft
+            $Rt{ $doc }{ $word } = (1 / (1 + $currFt ) * $currFt / (1 + $currFt)) ** $currTft;
+        }
+    }
+
     # ## hitung tf-idf
     # my %TFIDF = ();
 
     # foreach my $docno (sort keys %docTermFreq) {
     #     foreach my $word (sort keys %{ $docTermFreq{$docno} }) {
-    #         if ($word ne "totalWordsEachDoc") {
-    #             my $currTotalFreq = $docTermFreq{$docno}{"totalWordsEachDoc"};
+    #         if ($word ne "dld") {
+    #             my $currTotalFreq = $docTermFreq{$docno}{"dld"};
     #             $TFIDF{$docno} = $docTermFreq{$docno}{$word} / $currTotalFreq * $IDF{$word};
     #         }
     #     }
@@ -167,7 +207,7 @@ sub preprocess {
     close DOCS;
     close INDEX;
 
-    return %tft;
+    return %Rt;
 }
 
 sub tokenize {
@@ -176,7 +216,8 @@ sub tokenize {
     my $cft         = shift;
     my $stopwords   = shift;
 
-    my $totalWordsEachDoc = 0;
+    ## Total banyaknya kata dalam suatu dokumen
+    my $dld = 0;
 
     ## TOKENIZATION
     foreach my $kata (@$splitKorpus) {
@@ -202,11 +243,11 @@ sub tokenize {
                 $$cft{ $rootKata } = 1;
             }
 
-            $totalWordsEachDoc += 1;
+            $dld += 1;
         # }
     }
 
-    return $totalWordsEachDoc;
+    return $dld;
 }
 
 =item stem()
