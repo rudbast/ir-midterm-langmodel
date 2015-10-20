@@ -2,15 +2,20 @@
 
 ## How to
 
-Run from root folder
+Run from root folder in console / terminal / command line.
 
 ```shell
 perl -Ilib/ src/information-retrieval.pl
 ```
 
+To quit program, press Ctrl + C.
+
 ## Output
 
-Program result is in out/
+Program result output to console / terminal / command line.
+
+Example:
+![alt tag](https://github.com/rudbast/ir-midterm-langmodel/blob/gh-pages/img/output.png)
 
 ## License
 Copyright © 2015 Rudy <rudolf_bast@live.com>
