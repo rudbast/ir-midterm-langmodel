@@ -6,7 +6,7 @@ use warnings;
 use feature "say";
 use Data::Dumper qw (Dumper);
 
-use Stemmer qw ( prefixSuffixStem suffixPrefixStem )
+use Stemmer qw ( prefixSuffixStem  suffixPrefixStem );
 
 
 #### Main Program
@@ -15,11 +15,9 @@ use Stemmer qw ( prefixSuffixStem suffixPrefixStem )
 my $doc   = "../res/docs.dat";
 my $stw   = "../res/stopwords-ina.dat";
 ## Output data
-my $res   = "../out/hasil.txt";
 my $index = "../out/indeks.txt";
 
-## main process
-my %list = indexing($doc, $res, $index);
+my %list = preproces($doc, $res, $index);
 
 # print Dumper \%list;
 
@@ -28,15 +26,17 @@ say "selesai.";
 ####
 
 sub preprocess {
-    $file = shift;
+    my $file = shift;
     ## open file indeks kata
     open INDEX, "> $file" or die "can't open index file";
 
-    ## open file
-    open DOCS, "$file" or die "can't open resource file";
+    my $docs = shift;
+    ## open file input dokumen
+    open DOCS, "$docs" or die "can't open resource file";
 
+    my $stop = shift;
     ## open file stopwords
-    open(STOP,"$file") or die "can't open stopwords file";
+    open STOP, "$stop" or die "can't open stopwords file";
 
     ## simpan list stopwords dalam hash
     my %stopwords = ();
@@ -101,7 +101,7 @@ sub preprocess {
                 unless (exists($stopwords{ $kata })) {
 
                     ## STEMMING
-                    $rootKata = stem($kata);
+                    my $rootKata = stem($kata);
 
                     ## hitung frekuensi tiap kata
                     if (exists($hashKata{ $rootKata })) {
@@ -157,8 +157,6 @@ sub preprocess {
                 $TFIDF{$docno} = $result{$docno}{$word} / $currTotalFreq * $IDF{$word};
             }
         }
-
-        say RESULT "";
     }
 
     foreach my $word (sort {$termfreq{$b} <=> $termfreq{$a}
@@ -189,12 +187,12 @@ sub stem {
     ## kata yang akan di-stem
     my $word = shift;
     ## pilihan metode yang digunakan (default: 0)
-    my $choice = shift or 0;
+    my $choice = shift // 0;
 
     if ($choice eq 0) {
-        return prefixSuffixStem($word);
+        return &prefixSuffixStem($word);
     } else {
-        return suffixPrefixStem($word);
+        return &suffixPrefixStem($word);
     }
 }
 

@@ -5,20 +5,16 @@
 
 package Stemmer;
 
-use string;
+use strict;
 use warnings;
-use Exporter;
 
-
-our @ISA = qw( Exporter );
+use Exporter qw (import);
 
 our @EXPORT_OK = qw( prefixSuffixStem suffixPrefixStem );
 
-our @EXPORT = qw( prefixSuffixStem suffixPrefixStem );
-
 
 sub prefixSuffixStem() {
-    my $word = $_[0];
+    my $word = shift;
     my $temporary;
     my @numberOfStemAwalan = (0, 0, 0, 0, 0, 0, 0);
     my @numberOfStemAkhiran = (0, 0, 0);
@@ -36,8 +32,8 @@ sub prefixSuffixStem() {
         @temp = &stemmingAwalan($temporary, $numberOfStemAwalan[0],
         $numberOfStemAwalan[1], $numberOfStemAwalan[2], $numberOfStemAwalan[3],
         $numberOfStemAwalan[4], $numberOfStemAwalan[5], $numberOfStemAwalan[6]);
-        $index = 0;
-        foreach $i(@temp) {
+        my $index = 0;
+        foreach my $i(@temp) {
             if($index != $#temp) {
                 $numberOfStemAwalan[$index] = $temp[$index];
             } else {
@@ -51,9 +47,9 @@ sub prefixSuffixStem() {
         $temporary = $word;
         @temp = &stemmingAkhiran($temporary, $numberOfStemAkhiran[0],
         $numberOfStemAkhiran[1], $numberOfStemAkhiran[2]);
-        $index = 0;
+        my $index = 0;
 
-        foreach $i(@temp) {
+        foreach my $i(@temp) {
             if($index != $#temp){
                 $numberOfStemAkhiran[$index] = $temp[$index];
             } else {
@@ -66,7 +62,7 @@ sub prefixSuffixStem() {
 }
 
 sub suffixPrefixStem() {
-    my $word = $_[0];
+    my $word = shift;
     my $temporary;
     my @numberOfStemAwalan = (0, 0, 0, 0, 0, 0, 0);
     my @numberOfStemAkhiran = (0, 0, 0);
@@ -77,8 +73,8 @@ sub suffixPrefixStem() {
         @temp = &stemmingAkhiran($temporary, $numberOfStemAkhiran[0],
         $numberOfStemAkhiran[1], $numberOfStemAkhiran[2]);
         #me, be, pe, di, ke, te, se
-        $index = 0;
-        foreach $i(@temp) {
+        my $index = 0;
+        foreach my $i(@temp) {
             if($index != $#temp){
                 $numberOfStemAkhiran[$index] = $temp[$index];
             } else {
@@ -93,8 +89,8 @@ sub suffixPrefixStem() {
         @temp = &stemmingAwalan($temporary, $numberOfStemAwalan[0],
         $numberOfStemAwalan[1], $numberOfStemAwalan[2], $numberOfStemAwalan[3],
         $numberOfStemAwalan[4], $numberOfStemAwalan[5], $numberOfStemAwalan[6]);
-        $index = 0;
-        foreach $i(@temp) {
+        my $index = 0;
+        foreach my $i(@temp) {
             if($index != $#temp) {
                 $numberOfStemAwalan[$index] = $temp[$index];
             } else{
