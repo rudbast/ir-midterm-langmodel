@@ -38,9 +38,16 @@ sub main {
     # $Data::Dumper::Sortkeys = 1;
     # print Dumper \%processed;
 
-    test(\%stopwords, \%processed);
+    ## infinite loop untuk testing berulang kali, stop dengan
+    ## CTRL + C
+    while (1) {
+        clearScreen();
 
-    say "\nselesai.";
+        ## testing system
+        test(\%stopwords, \%processed);
+
+        pause();
+    }
 
     return;
 }
@@ -386,7 +393,7 @@ sub computeLMQuery {
         ## container untuk hasil kali dari 1 - p(t | Md)
         my $inverse = 1;
 
-        foreach my $word (keys $data{ $doc }) {
+        foreach my $word (keys %{ $data{ $doc } }) {
             ## counter untuk mengecek apakah kata yang diproses
             ## sekarang termasuk dalam query yang di input
             my $check = 0;
@@ -435,8 +442,7 @@ sub outputTestResult {
         printf "%5s : %2.9f\n", $doc, $result{ $doc };
     }
 
-    say "";
-    say "* p.s: dokumen diurutkan berdasarkan relevansi dengan query."
+    say "\n* p.s: dokumen diurutkan berdasarkan relevansi dengan query.\n";
 }
 
 sub normalization {
@@ -449,5 +455,17 @@ Simulasi pembersihan layar dengan karakter \n (newline).
 
 =cut
 sub clearScreen {
-    print "\n" * 60;
+    for (my $i = 0; $i < 60; $i++) {
+        say "";
+    }
+}
+
+=item clearScreen()
+
+Simulasi system pause, menunggu input dari user untuk melanjutkan.
+
+=cut
+sub pause() {
+    say "Press ENTER to continue";
+    my $dump = <STDIN>;
 }
