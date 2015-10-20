@@ -8,49 +8,85 @@ use Data::Dumper qw (Dumper);
 
 use Stemmer qw ( prefixSuffixStem  suffixPrefixStem );
 
+###############################################################################
 
-#### Main Program
+main();
 
-## File input & output path
-my $resourcePath = "./res";
-my $outputPath   = "./out";
+###############################################################################
 
-## Input data
-my $doc          = "$resourcePath/test.dat";
-my $stw          = "$resourcePath/stopwords-ina.dat";
+=item main()
 
-## Output data
-my $index        = "$outputPath/indeks.txt";
+Main program.
 
-my %result = preprocess($doc, $index, $stw);
+=cut
+sub main {
+    ## File input & output path
+    my $resourcePath = "./res";
+    my $outputPath   = "./out";
 
-$Data::Dumper::Sortkeys = 1;
-print Dumper \%result;
+    ## Input data
+    my $doc          = "$resourcePath/test.dat";
+    my $stw          = "$resourcePath/stopwords-ina.dat";
 
-say "selesai.";
+    ## Output data
+    my $index        = "$outputPath/indeks.txt";
 
-####
+    my %stopwords = loadStopwords($stw);
+    ## Hasil preprocessing dari data dokumen
+    my %processed = preprocessDocument($doc, $index, \%stopwords);
 
-sub preprocess {
-    my $docs = shift;
-    ## open file input dokumen
-    open DOCS, "$docs" or die "can't open resource file";
+    # $Data::Dumper::Sortkeys = 1;
+    # print Dumper \%processed;
 
-    my $file = shift;
-    ## open file indeks kata
-    open INDEX, "> $file" or die "can't open index file";
+    test(\%stopwords, \%processed);
 
+    say "\nselesai.";
+
+    return;
+}
+
+=item loadStopwords()
+
+Membuka file stopwords kemudian dimasukkan kedalam memory
+dalam bentuk hash-array / dictionary kemudian mengembalikan
+hash ke program utama / pemanggil.
+
+=cut
+sub loadStopwords {
     my $stop = shift;
     ## open file stopwords
-    open STOP, "$stop" or die "can't open stopwords file";
+    open STOPWORDS, "$stop" or die "can't open stopwords file";
 
     ## simpan list stopwords dalam hash
     my %stopwords = ();
 
-    while (<STOP>) {
+    while (<STOPWORDS>) {
         chomp;
         $stopwords{ $_ } = 1;
     }
+
+    close STOPWORDS;
+
+    return %stopwords;
+}
+
+=item preprocessInput()
+
+Preprocessing pada dokumen.
+
+=cut
+sub preprocessDocument {
+    my $docs         = shift;
+    my $file         = shift;
+    my $refStopwords = shift;
+
+    my %stopwords = %{ $refStopwords };
+
+    ## open file input dokumen
+    open DOCS, "$docs" or die "can't open resource file";
+
+    ## open file indeks kata
+    open INDEX, "> $file" or die "can't open index file";
 
     ## total kata muncul pada berapa dokumen
     my %dft         = ();
@@ -101,7 +137,7 @@ sub preprocess {
             my @splitKorpus = split;
 
             ## hitung total kata tiap dokumen
-            $dld += tokenize(\@splitKorpus, \%hashKata, \%cft, \%stopwords);
+            $dld += tokenize(\%stopwords, \%hashKata, \@splitKorpus, \%cft);
         }
 
         if (/<\/DOC>/) {
@@ -127,6 +163,8 @@ sub preprocess {
         }
     }
 
+    ## PERHITUNGAN LANGUAGE MODEL
+
     ## container hasil hitung tft tiap dokumen
     my %tft = ();
 
@@ -149,9 +187,8 @@ sub preprocess {
     my %ft      = ();
     ## container hasil hitung R t tiap dokumen
     my %Rt      = ();
-    ## container hasil p(t | Md)
+    ## container hasil p(t | Md) & smoothing
     my %p       = ();
-    ## container hasil smoothing
 
     foreach my $word (keys %dft) {
         my $avg = 0;
@@ -179,7 +216,7 @@ sub preprocess {
             my $currFt  = $ft{ $doc }{ $word };
             my $currTft = $tft{ $doc }{ $word };
 
-            ## Rt = (1 / (1 + ft) * ft / (1 + ft)) ^ tft
+            ## Rt = (1 / (1 + ft) * ft) / (1 + ft) ^ tft
             $Rt{ $doc }{ $word } = (1 / (1 + $currFt ) * $currFt / (1 + $currFt)) ** $currTft;
 
             my $currPml  = $pml{ $doc }{ $word };
@@ -200,18 +237,23 @@ sub preprocess {
     }
 
     ## tutup file
-    close STOP;
     close DOCS;
     close INDEX;
 
     return %p;
 }
 
+=item tokenize()
+
+Tahap tokenisasi pada fase preprocessing, mencakupi stopwords
+removal & stemming.
+
+=cut
 sub tokenize {
-    my $splitKorpus = shift;
-    my $hashKata    = shift;
-    my $cft         = shift;
     my $stopwords   = shift;
+    my $hashKata    = shift;
+    my $splitKorpus = shift;
+    my $cft         = shift;
 
     ## Total banyaknya kata dalam suatu dokumen
     my $dld = 0;
@@ -271,10 +313,141 @@ sub stem {
     }
 }
 
-sub computeTfIdf {
-    # body...
+
+=item test()
+
+Fase percobaan pada sistem, menerima input query kemudian melakukan
+preprocessing dan menghitung relevansi dokumen.
+
+=cut
+sub test {
+    my $refStopwords = shift;
+    my $refProcessed = shift;
+
+    ## input query
+    print "Query ? ";
+    chomp(my $query = <STDIN>);
+
+    my @cleanQueries = preprocessQuery($refStopwords, $query);
+
+    ## hitung hasil query
+    my %result = computeLMQuery($refProcessed, \@cleanQueries);
+
+    ## output hasil beserta kesimpulan
+    outputTestResult(\%result);
+}
+
+=item preprocessQuery()
+
+Tahap preprocessing pada input query, mencakupi proses tokenisasi,
+stopwords removal dan stemming.
+
+=cut
+sub preprocessQuery {
+    my $refStopwords = shift;
+    my $query        = shift;
+
+    my %stopwords    = %{ $refStopwords };
+    ## TOKENIZATION
+    my @queries = split /\s+/, $query;
+
+    ## container hasil preprocessing terhadap query
+    my @cleanQueries = ();
+
+    foreach my $query (@queries) {
+        ## STOPWORDS REMOVAL
+        unless (exists($stopwords{ $query })) {
+            ## STEMMING
+            push @cleanQueries, stem($query);
+        }
+    }
+
+    return @cleanQueries;
+}
+
+=item computeLMQuery()
+
+Perhitungan query similarity dengan Language Model.
+
+=cut
+sub computeLMQuery {
+    my $refData    = shift;
+    my $refQueries = shift;
+
+    my %data    = %{ $refData };
+    my @queries = @{ $refQueries };
+
+    my %result = ();
+
+    foreach my $doc (keys %data) {
+
+        ## container untuk hasil kali dari p(t | Md)
+        my $include = 1;
+        ## container untuk hasil kali dari 1 - p(t | Md)
+        my $inverse = 1;
+
+        foreach my $word (keys $data{ $doc }) {
+            ## counter untuk mengecek apakah kata yang diproses
+            ## sekarang termasuk dalam query yang di input
+            my $check = 0;
+
+            foreach my $query (@queries) {
+                ## cek apakah yang dicocokan berada dalam query
+                if ($query eq $word) {
+                    $include *= $data{ $doc }{ $word };
+
+                    ## berhenti mengecek query lainnya jika kata
+                    ## yang diproses sudah termasuk dalam query
+                    last;
+                } else {
+                    $check += 1;
+                }
+            }
+
+            ## kata tidak termasuk dalam query
+            if ($check eq scalar @queries) {
+                $inverse *= (1 - $data{ $doc }{ $word });
+            }
+        }
+
+        ## simpan hasil perhitungan similarity per dokumen
+        $result{ $doc } = $include * $inverse;
+    }
+
+    return %result;
+}
+
+=item outpuTestResult()
+
+Output hasil test diurutkan berdasarkan relevansi.
+
+=cut
+sub outputTestResult {
+    my $refResult = shift;
+
+    my %result = %{ $refResult };
+
+    say "";
+    say ":: Hasil Perhitungan dengan Language Model ::";
+    say "";
+
+    foreach my $doc (sort {$result{ $b } <=> $result{ $a }} keys %result) {
+        printf "%5s : %2.9f\n", $doc, $result{ $doc };
+    }
+
+    say "";
+    say "* p.s: dokumen diurutkan berdasarkan relevansi dengan query."
 }
 
 sub normalization {
     # body...
+}
+
+=item clearScreen()
+
+Simulasi pembersihan layar dengan karakter \n (newline).
+
+=cut
+sub clearScreen {
+    print "\n" * 60;
 }
