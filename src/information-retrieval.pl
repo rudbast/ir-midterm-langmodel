@@ -149,6 +149,9 @@ sub preprocess {
     my %ft      = ();
     ## container hasil hitung R t tiap dokumen
     my %Rt      = ();
+    ## container hasil p(t | Md)
+    my %p       = ();
+    ## container hasil smoothing
 
     foreach my $word (keys %dft) {
         my $avg = 0;
@@ -166,44 +169,42 @@ sub preprocess {
         ## pavg = avg(pml(d1, d2, d3)) / dft
         $pavg{ $word } = $avg / $dft{ $word };
 
-        ## hitung ft
+        ## hitung ft, Rt, p(t | Md)
         foreach my $doc (keys %docTermFreq) {
             my $dld = $docTermFreq{ $doc }{ "dld" };
 
             ## ft = pavg * dld
             $ft{ $doc }{ $word } = $pavg{ $word } * $dld;
 
-            my $currFt = $ft{ $doc }{ $word };
+            my $currFt  = $ft{ $doc }{ $word };
             my $currTft = $tft{ $doc }{ $word };
 
-            ## Rt = (1/(1+ft)*ft/(1+ft))^tft
+            ## Rt = (1 / (1 + ft) * ft / (1 + ft)) ^ tft
             $Rt{ $doc }{ $word } = (1 / (1 + $currFt ) * $currFt / (1 + $currFt)) ** $currTft;
+
+            my $currPml  = $pml{ $doc }{ $word };
+            my $currRt   = $Rt{ $doc }{ $word };
+            my $currPavg = $pavg{ $word };
+
+            ## p(t | Md) = pml ^ (1 - Rt) * pavg ^ Rt
+            if ($currPml eq 0) {
+                ## kasus khusus ketika currPml 0, maka akan terjadi pemangkatan
+                ## 0 dengan angka lain (Cth: 0^x)
+                # $p{ $doc }{ $word } = $currPml;
+                ## smoothing untuk nilai 0, = cft / cs
+                $p{ $doc }{ $word } = $cft{ $word } / $cs;
+            } else {
+                $p{ $doc }{ $word } = ($currPml ** (1 - $currRt)) * ($currPavg ** $currRt);
+            }
         }
     }
-
-    # ## hitung tf-idf
-    # my %TFIDF = ();
-
-    # foreach my $docno (sort keys %docTermFreq) {
-    #     foreach my $word (sort keys %{ $docTermFreq{$docno} }) {
-    #         if ($word ne "dld") {
-    #             my $currTotalFreq = $docTermFreq{$docno}{"dld"};
-    #             $TFIDF{$docno} = $docTermFreq{$docno}{$word} / $currTotalFreq * $IDF{$word};
-    #         }
-    #     }
-    # }
-
-    # foreach my $word (sort {$dft{$b} <=> $dft{$a}
-    #     or $a cmp $b} keys %dft) {
-    #     printf INDEX "%20s : %4d\n", $word, $dft{$word};
-    # }
 
     ## tutup file
     close STOP;
     close DOCS;
     close INDEX;
 
-    return %Rt;
+    return %p;
 }
 
 sub tokenize {
